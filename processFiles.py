@@ -1,3 +1,13 @@
+#!/usr/bin/python
+
+#Rebecca Nickerson - 2/11/2015
+
+#run as:
+#python processFiles.py ground_truth_input.txt  ground_truth_output.txt  test_data_input.txt  test_data_output.txt correlation_output.txt
+
+#correlation_output will contain relevance and reliability proportions
+
+
 import sys
 import re
 
@@ -27,10 +37,12 @@ def getTruth(input_file, output_file):
     start_new = True
     rangelist = []
 
+    #print "INDEX", frame_index, smile_index
+
     for line in input_file:
         words = line.split()
-        if(words[frame_index] > frame_current):
-            frame_current = words[frame_index]
+        if(int(words[frame_index]) > frame_current):
+            frame_current = int(words[frame_index])
             val = words[smile_index]
             output_file.write(val + " ")
             if start_new and int(val) == 1:
@@ -54,24 +66,28 @@ def getTruth(input_file, output_file):
 #parse out if joy surpassed a set level in each frame
 def getTest(input_file, output_file):
     first_line = input_file.readline()
+    k = 2 #offset caused by weird whitespace :(
     
-    #
-    #while(first_line.find("StudyName") == -1):
-    #    first_line = input_file.readline()
+    while(first_line.find("StudyName") == -1):
+        first_line = input_file.readline()
 
 
     start_new = True
     rangelist = []
     words = re.split('\t', first_line)
-    print words
+    #print words
 
-    joy_index = words.index("Joy Intensity")
-    frame_index = words.index("FRAME") #may have to change for actual test file
+    joy_index = words.index("Joy Evidence")
+    frame_index = words.index("FrameNo") #may have to change for actual test file
+    print "INDEX:", frame_index, joy_index
     for line in input_file:
         words = line.split()
         if joy_index < len(words):
-            if float(words[joy_index]) > .5:
+            if float(words[joy_index + k]) > .5:
                 output_file.write("1 ")
+                #print "evidence:", words[frame_index]
+                #print words[frame_index + 1]
+                print "evidence:", words[frame_index + k]
                 val = 1
             else:
                 output_file.write("0 ")
@@ -79,12 +95,11 @@ def getTest(input_file, output_file):
         else:
             output_file.write("2 ")
             val = 2
-        print start_new, val
         if start_new and val == 1:
-            new_range = Range(int(words[frame_index]), int(words[frame_index]))
+            new_range = Range(int(words[frame_index + k]), int(words[frame_index + k]))
             start_new = False
         elif not start_new and val == 0:
-            new_range.end = int(words[frame_index]) - 1
+            new_range.end = int(words[frame_index + k]) - 1
             rangelist.append(new_range)
             start_new = True
 
@@ -100,7 +115,7 @@ def compare(truth_file, test_file):
     truth_set = truth_file.readline().split()
     test_set = test_file.readline().split()
 
-    print truth_set, test_set
+    #print truth_set, test_set
 
     p_relevance = -1.0
     p_reliable = -1.0
@@ -178,11 +193,11 @@ def main(argv):
     output_truth_file.close()
     output_test_file.close()
 
-    test_in = open(output_test, 'r')
-    truth_in = open(output_truth, 'r')
-    compare(truth_in, test_in)
-    test_in.close()
-    truth_in.close()
+    #test_in = open(output_test, 'r')
+    #truth_in = open(output_truth, 'r')
+    #compare(truth_in, test_in)
+    #test_in.close()
+    #truth_in.close()
 
 
 
