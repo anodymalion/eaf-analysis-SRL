@@ -1,23 +1,21 @@
 #!/usr/bin/python
 
-#Rebecca Nickerson - 2/11/2015
+#Rebecca Nickerson - last updated 2/20/2015
 
 #run as:
 #python processFiles.py ground_truth_input.txt  ground_truth_output.txt  test_data_input.txt  test_data_output.txt correlation_output.txt
 
 #correlation_output will contain relevance and reliability proportions
+#doesn't actually output anything to that file yet
 
-
-import sys
-import re
-
-
+import sys, re
 
 class Range:
     '''information of each range of smile data'''
     def __init__(self, start, end):
         self.start = start
         self.end = end
+        self.contained = 0
 
 def get_args(argv):
     args = str(sys.argv)
@@ -36,8 +34,6 @@ def getTruth(input_file, output_file):
     frame_current = -1
     start_new = True
     rangelist = []
-
-    #print "INDEX", frame_index, smile_index
 
     for line in input_file:
         words = line.split()
@@ -60,33 +56,29 @@ def getTruth(input_file, output_file):
     print "getTruth ranges:"   
     for rang in rangelist:
         print rang.start, " \t", rang.end
-
+    return rangelist
 
 
 #parse out if joy surpassed a set level in each frame
 def getTest(input_file, output_file):
     first_line = input_file.readline()
-    k = 2 #offset caused by weird whitespace :(
+    k = 2 #offset caused by weird whitespace :( - may have to edit depending on the input file
     
     while(first_line.find("StudyName") == -1):
         first_line = input_file.readline()
 
-
     start_new = True
     rangelist = []
     words = re.split('\t', first_line)
-    #print words
 
     joy_index = words.index("Joy Evidence")
-    frame_index = words.index("FrameNo") #may have to change for actual test file
+    frame_index = words.index("FrameNo")
     print "INDEX:", frame_index, joy_index
     for line in input_file:
         words = line.split()
         if joy_index < len(words):
             if float(words[joy_index + k]) > .5:
                 output_file.write("1 ")
-                #print "evidence:", words[frame_index]
-                #print words[frame_index + 1]
                 print "evidence:", words[frame_index + k]
                 val = 1
             else:
@@ -106,16 +98,13 @@ def getTest(input_file, output_file):
     print "getTest ranges:"
     for rang in rangelist:
         print rang.start, "\t", rang.end
-
-
+    return rangelist
 
 
 def compare(truth_file, test_file):
     
     truth_set = truth_file.readline().split()
     test_set = test_file.readline().split()
-
-    #print truth_set, test_set
 
     p_relevance = -1.0
     p_reliable = -1.0
@@ -164,7 +153,6 @@ def compare(truth_file, test_file):
                 n_reliableCount += 1
             n_countb += 1
         
-
     if p_countv > 0:
         p_relevance = p_relevanceCount / p_countv
     if p_countb > 0:
@@ -179,30 +167,65 @@ def compare(truth_file, test_file):
     print "p_relev:", p_relevance, "\np_relib:", p_reliable, "\nn_relev:", n_relevance, "\nn_relib:", n_reliable, "\nmiscount:", miscount_prop
 
 
+def compareRanges(truth_ranges, test_ranges):
+
+    for testrange in test_ranges:
+        a = int(testrange.start)
+        b = int(testrange.end)
+        for truthrange in truth_ranges:
+            c = int(truthrange.start)
+            d = int(truthrange.end)
+            #print "testing:",a,b,";",c,d
+            if b < c:
+                #print "n1"
+                continue
+            elif a > d:
+                #print "n2"
+                continue
+            elif c <= a:
+                #print "n3"
+                if b >= d:
+                    #print "d-a+1 =", d-a+1
+                    testrange.contained += (d - a + 1)
+                else:
+                    #print "b-a+1 =", b-a+1
+                    testrange.contained += (b - a + 1)
+            else: #a < c, b > c
+                #print "n4"
+                if b > d:
+                    #print "(d-c+1) =", d - c + 1
+                    testrange.contained += (d - c + 1)
+                else:
+                    #print "(b-c+1) =", b - c + 1
+                    testrange.contained += (b - c + 1)
+                
+        print "testrange total for", a, b, ":", testrange.contained 
+
 
 def main(argv):
     [input_truth, output_truth, input_test, output_test] = get_args(argv)
-    input_truth_file = open(input_truth, 'r')
+    '''input_truth_file = open(input_truth, 'r')
     input_test_file = open(input_test, 'r')
     output_truth_file = open(output_truth, "w")
     output_test_file = open(output_test, "w")
 
-    getTruth(input_truth_file, output_truth_file)
-    getTest(input_test_file, output_test_file)
+    truthrange = getTruth(input_truth_file, output_truth_file)
+    testrange = getTest(input_test_file, output_test_file)
 
     output_truth_file.close()
     output_test_file.close()
 
-    #test_in = open(output_test, 'r')
-    #truth_in = open(output_truth, 'r')
-    #compare(truth_in, test_in)
-    #test_in.close()
-    #truth_in.close()
-
-
+    test_in = open(output_test, 'r')
+    truth_in = open(output_truth, 'r')
+    compare(truth_in, test_in)
+    test_in.close()
+    truth_in.close()
 
     input_truth_file.close()
-    input_test_file.close()
+    input_test_file.close()'''
+
+    #compareRanges(truthrange, testrange)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
