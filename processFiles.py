@@ -165,11 +165,12 @@ def compare(truth_file, test_file):
     if total > 0:
         miscount_prop = miscount / total
 
-    print "p_relev:", p_relevance, "\np_relib:", p_reliable, "\nn_relev:", n_relevance, "\nn_relib:", n_reliable, "\nmiscount:", miscount_prop
+    print "p_relev:", p_relevance, "\np_relib:", p_reliable 
+    print "n_relev:", n_relevance, "\nn_relib:", n_reliable, "\nmiscount:", miscount_prop
 
 
+#compare the truth and test ranges to see what proportion of the truth is captured by the test
 def compareRanges(truth_ranges, test_ranges):
-
     total_contained = 0.0
     total_number = 0.0
 
@@ -234,6 +235,7 @@ def main(argv):
     input_truth_file.close()
     input_test_file.close()
 
+    #this was for testing the compareRanges function only
     '''r1 = Range(0, 1)
     r2 = Range(10, 39)
     r3 = Range(42, 58)
