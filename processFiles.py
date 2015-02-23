@@ -16,6 +16,7 @@ class Range:
         self.start = start
         self.end = end
         self.contained = 0
+        self.prop = 0.0
 
 def get_args(argv):
     args = str(sys.argv)
@@ -169,6 +170,9 @@ def compare(truth_file, test_file):
 
 def compareRanges(truth_ranges, test_ranges):
 
+    total_contained = 0.0
+    total_number = 0.0
+
     for testrange in test_ranges:
         a = int(testrange.start)
         b = int(testrange.end)
@@ -198,13 +202,19 @@ def compareRanges(truth_ranges, test_ranges):
                 else:
                     #print "(b-c+1) =", b - c + 1
                     testrange.contained += (b - c + 1)
-                
-        print "testrange total for", a, b, ":", testrange.contained 
+        total_contained += testrange.contained
+        total_number += testrange.end - testrange.start + 1
+        prop = float(testrange.contained) / float((testrange.end - testrange.start + 1))
+        testrange.prop = prop
+        #print "testrange total for", a, b, ":", testrange.contained, "; proportion:", prop
+    total_prop = total_contained / total_number
+    #print "prop of r1 contained in r2:", total_prop
+    return total_prop
 
 
 def main(argv):
     [input_truth, output_truth, input_test, output_test] = get_args(argv)
-    '''input_truth_file = open(input_truth, 'r')
+    input_truth_file = open(input_truth, 'r')
     input_test_file = open(input_test, 'r')
     output_truth_file = open(output_truth, "w")
     output_test_file = open(output_test, "w")
@@ -222,9 +232,25 @@ def main(argv):
     truth_in.close()
 
     input_truth_file.close()
-    input_test_file.close()'''
+    input_test_file.close()
 
-    #compareRanges(truthrange, testrange)
+    '''r1 = Range(0, 1)
+    r2 = Range(10, 39)
+    r3 = Range(42, 58)
+
+    d1 = Range(0, 2)
+    d2 = Range(18, 34)
+    d3 = Range(41, 41)
+    d4 = Range(50, 60)
+
+    truthrange = [r1, r2, r3]
+    testrange = [d1,d2,d3,d4]'''
+
+    print "proportion of truth smiles captured by test:"
+    print compareRanges(truthrange, testrange)
+    print ""
+    print "proportion of test smiles actually in truth:"
+    print compareRanges(testrange, truthrange)
 
 
 if __name__ == "__main__":
