@@ -242,7 +242,7 @@ def main(argv):
     print val2
 
     final_output_file.write("parameter: " + "Joy Intensity\n") #change w/ parameter
-    final_output_file.write("threshold" + str(threshold) + "\n")
+    final_output_file.write("threshold: " + str(threshold) + "\n")
     final_output_file.write("p_relevance: " + str(p_rev) + "\n")
     final_output_file.write("p_reliability: " + str(p_rel) + "\n")
     final_output_file.write("n_relevance: " + str(n_rev) + "\n")
