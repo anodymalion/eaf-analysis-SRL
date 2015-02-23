@@ -1,12 +1,13 @@
 #!/usr/bin/python
 
-#Rebecca Nickerson - last updated 2/20/2015
+#Rebecca Nickerson - last updated 2/23/2015
 
 #run as:
 #python processFiles.py ground_truth_input.txt  ground_truth_output.txt  test_data_input.txt  test_data_output.txt correlation_output.txt
 
 #correlation_output will contain relevance and reliability proportions
-#doesn't actually output anything to that file yet
+#test_in_truth = proportion of test data smiles actually present in truth data
+#truth_in_test = proportion of truth smiles captured by test data
 
 import sys, re
 
@@ -16,6 +17,7 @@ class Range:
         self.start = start
         self.end = end
         self.contained = 0
+        self.prop = 0.0
 
 def get_args(argv):
     args = str(sys.argv)
@@ -23,7 +25,8 @@ def get_args(argv):
     output_truth = str(sys.argv[2])
     input_test = str(sys.argv[3])
     output_test = str(sys.argv[4])
-    return input_truth, output_truth, input_test, output_test
+    final_output = str(sys.argv[5])
+    return input_truth, output_truth, input_test, output_test, final_output
 
 #parse out whether smile existed in each frame
 def getTruth(input_file, output_file):
@@ -60,10 +63,10 @@ def getTruth(input_file, output_file):
 
 
 #parse out if joy surpassed a set level in each frame
-def getTest(input_file, output_file):
+def getTest(input_file, output_file, threshold):
     first_line = input_file.readline()
-    k = 2 #offset caused by weird whitespace :( - may have to edit depending on the input file
-    
+    k = -1 #offset caused by weird whitespace :( - may have to change it depending on the input_file
+
     while(first_line.find("StudyName") == -1):
         first_line = input_file.readline()
 
@@ -73,13 +76,13 @@ def getTest(input_file, output_file):
 
     joy_index = words.index("Joy Evidence")
     frame_index = words.index("FrameNo")
-    print "INDEX:", frame_index, joy_index
+    #print "INDEX:", frame_index, joy_index
     for line in input_file:
         words = line.split()
         if joy_index < len(words):
-            if float(words[joy_index + k]) > .5:
+            if float(words[joy_index + k]) > threshold:
                 output_file.write("1 ")
-                print "evidence:", words[frame_index + k]
+                #print "evidence:", words[frame_index + k], ":", words[joy_index + k]
                 val = 1
             else:
                 output_file.write("0 ")
@@ -131,7 +134,6 @@ def compare(truth_file, test_file):
         size = len(test_set)
 
     for i in range(size):
-        print int(test_set[i]), int(truth_set[i])
         total += 1
         if int(test_set[i]) == 2:
             miscount += 1
@@ -164,79 +166,91 @@ def compare(truth_file, test_file):
     if total > 0:
         miscount_prop = miscount / total
 
-    print "p_relev:", p_relevance, "\np_relib:", p_reliable, "\nn_relev:", n_relevance, "\nn_relib:", n_reliable, "\nmiscount:", miscount_prop
+    print "p_relev:", p_relevance, "\np_relib:", p_reliable 
+    print "n_relev:", n_relevance, "\nn_relib:", n_reliable, "\nmiscount:", miscount_prop
+    return p_relevance, p_reliable, n_relevance, n_reliable, miscount_prop
 
 
+#compare the truth and test ranges to see what proportion of the truth is captured by the test
 def compareRanges(truth_ranges, test_ranges):
+    total_contained = 0.0
+    total_number = 0.0
 
     for testrange in test_ranges:
-        print"new testrange"
         a = int(testrange.start)
         b = int(testrange.end)
         for truthrange in truth_ranges:
             c = int(truthrange.start)
             d = int(truthrange.end)
-            print "testing:",a,b,";",c,d
             if b < c:
-                print "n1"
                 continue
             elif a > d:
-                print "n2"
-                break
+                continue
             elif c <= a:
-                print "n3"
-                if b <= d:
+                if b >= d:
                     testrange.contained += (d - a + 1)
                 else:
                     testrange.contained += (b - a + 1)
             else: #a < c, b > c
-                print "n4"
                 if b > d:
-                    testrange.contained += (d - a + 1)
+                    testrange.contained += (d - c + 1)
                 else:
-                    testrange.contained += (b - a + 1)
-                
-        print "testrange total: ", testrange.contained 
+                    testrange.contained += (b - c + 1)
+        total_contained += testrange.contained
+        total_number += testrange.end - testrange.start + 1
+        prop = float(testrange.contained) / float((testrange.end - testrange.start + 1))
+        testrange.prop = prop
+    if total_number > 0:
+        total_prop = total_contained / total_number
+    else:
+        total_prop = -1
+    return total_prop
 
 
 def main(argv):
-    [input_truth, output_truth, input_test, output_test] = get_args(argv)
-    '''input_truth_file = open(input_truth, 'r')
+    [input_truth, output_truth, input_test, output_test, final_output] = get_args(argv)
+    input_truth_file = open(input_truth, 'r')
     input_test_file = open(input_test, 'r')
     output_truth_file = open(output_truth, "w")
     output_test_file = open(output_test, "w")
+    final_output_file = open(final_output, "w")
+
+    #can change this depending on what the threshold of detecting a smile should be
+    threshold = .5
 
     truthrange = getTruth(input_truth_file, output_truth_file)
-    testrange = getTest(input_test_file, output_test_file)
+    testrange = getTest(input_test_file, output_test_file, threshold)
 
     output_truth_file.close()
     output_test_file.close()
 
     test_in = open(output_test, 'r')
     truth_in = open(output_truth, 'r')
-    compare(truth_in, test_in)
+    [p_rev, p_rel, n_rev, n_rel, mis] = compare(truth_in, test_in)
     test_in.close()
     truth_in.close()
 
     input_truth_file.close()
-    input_test_file.close()'''
+    input_test_file.close()
 
-    r1 = Range(20,30)
-    r2 = Range(35, 50)
-    r3 = Range(80, 100)
-    r9 = Range(105, 106)
+    val1 = compareRanges(truthrange, testrange)
+    val2 = compareRanges(testrange, truthrange)
 
-    rangelist1 = [r1, r2, r3, r9]
+    print "proportion of test smiles actually in truth:"
+    print val1
+    print "proportion of truth smiles captured by test:"
+    print val2
 
-    r4 = Range(21, 26)
-    r5 = Range(30, 36)
-    r6 = Range(52, 55)
-    r7 = Range(70, 81)
-    r8 = Range(90, 102)
-
-    rangelist2 = [r4, r5, r6, r7, r8]
-
-    compareRanges(rangelist2, rangelist1)
+    final_output_file.write("parameter: " + "Joy Intensity\n") #change w/ parameter
+    final_output_file.write("threshold" + str(threshold))
+    final_output_file.write("p_relevance: " + str(p_rev) + "\n")
+    final_output_file.write("p_reliability: " + str(p_rel) + "\n")
+    final_output_file.write("n_relevance: " + str(n_rev) + "\n")
+    final_output_file.write("n_reliability: " + str(n_rel) + "\n")
+    final_output_file.write("miscount_proportion: " + str(p_rev) + "\n")
+    final_output_file.write("test_in_truth: " + str(val1) + "\n")
+    final_output_file.write("truth_in_test: " + str(val2) + "\n")
+    final_output_file.close()
 
 
 if __name__ == "__main__":
