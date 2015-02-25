@@ -1,21 +1,25 @@
 #!/usr/bin/python
 
-#Rebecca Nickerson - last updated 2/23/2015
+#Rebecca Nickerson - last updated 2/25/2015
 
 #run as:
-#python processFiles.py ground_truth_input.txt  ground_truth_output.txt  test_data_input.txt  test_data_output.txt correlation_output.txt
+#python processFiles.py ground_truth_input.txt  test_data_input.txt  FINAL.txt
 
-#correlation_output will contain relevance and reliability proportions
+#FINAL will contain relevance and reliability proportions and other data
 #test_in_truth = proportion of test data smiles actually present in truth data
 #truth_in_test = proportion of truth smiles captured by test data
 
 import sys, re
 
+#changeable
+threshold_joy = .5 #necessary joy to count as smile
+threshold_au12 = .25 #necessary AU12 activation to count as smile
+maxgap = 10  #leniency when merging smile ranges 
+#(e.g (1,3), (5,6) merged to (1,6) with maxgap > 0)
+
 truth_list = []
 test_list_joy = []
 test_list_au12 = []
-threshold_joy = .5
-threshold_au12 = .25
 
 class Range:
     '''information of each range of smile data'''
@@ -25,14 +29,14 @@ class Range:
         self.contained = 0
         self.prop = 0.0
 
+
 def get_args(argv):
     args = str(sys.argv)
     input_truth = str(sys.argv[1])
-    output_truth = str(sys.argv[2])
-    input_test = str(sys.argv[3])
-    output_test = str(sys.argv[4])
-    final_output = str(sys.argv[5])
-    return input_truth, output_truth, input_test, output_test, final_output
+    input_test = str(sys.argv[2])
+    final_output = str(sys.argv[3])
+    return input_truth, input_test, final_output
+
 
 #parse out whether smile existed in each frame
 def getTruth(input_file):
@@ -69,12 +73,10 @@ def getTruth(input_file):
     return rangelist
 
 
-#parse out if joy surpassed a set level in each frame
-#now checks action units 6 and 12 as well
+#parse out if joy, AU activation surpassed thresholds in each frame
 def getTest(input_file):
     first_line = input_file.readline()
     k = -1 #offset caused by mismatched whitespace in dump file
-    #may have to change it depending on the input_file
 
     while(first_line.find("StudyName") == -1):
         first_line = input_file.readline()
@@ -88,7 +90,7 @@ def getTest(input_file):
     words = re.split('\t', first_line)
 
     joy_index = words.index("Joy Evidence")
-    au6_index = words.index("AU6 Evidence")
+    #au6_index = words.index("AU6 Evidence")
     au12_index = words.index("AU12 Evidence")
     frame_index = words.index("FrameNo")
 
@@ -129,6 +131,8 @@ def getTest(input_file):
         test_list_joy.append(val_joy)
         test_list_au12.append(val_au12)
 
+    rangelist_au12 = mergeRanges(rangelist_au12) 
+
     print "getTest ranges:"
     for rang in rangelist_joy:
         print rang.start, "\t", rang.end
@@ -139,11 +143,27 @@ def getTest(input_file):
     return rangelist_joy
 
 
-   
+#merge smiles ranges that are significantly close together
+def mergeRanges(rangelist):
+ 
+    new_rangelist = []
+    if(len(rangelist) > 0):
+        prev_rang = rangelist[0]
+        for rang in rangelist:
+            if rang.start - prev_rang.end <= maxgap + 1:
+                prev_rang.end = rang.end
+            else:
+                new_rangelist.append(prev_rang)
+                prev_rang = rang
+
+        new_rangelist.append(prev_rang)
+    return new_rangelist
 
 
 
 
+
+#compare on a purely index to index basis (doesn't account for smile ranges)
 def compare():
     
     truth_set = truth_list
@@ -207,7 +227,8 @@ def compare():
         miscount_prop = miscount / total
 
     print "p_relev:", p_relevance, "\np_relib:", p_reliable 
-    print "n_relev:", n_relevance, "\nn_relib:", n_reliable, "\nmiscount:", miscount_prop
+    print "n_relev:", n_relevance, "\nn_relib:", n_reliable
+    print "miscount:", miscount_prop
     return p_relevance, p_reliable, n_relevance, n_reliable, miscount_prop
 
 
@@ -248,25 +269,15 @@ def compareRanges(truth_ranges, test_ranges):
 
 
 def main(argv):
-    [input_truth, output_truth, input_test, output_test, final_output] = get_args(argv)
+    [input_truth, input_test, final_output] = get_args(argv)
     #input_truth_file = open(input_truth, 'r')
     input_test_file = open(input_test, 'r')
-    #output_truth_file = open(output_truth, "w")
-    output_test_file = open(output_test, "w")
     #final_output_file = open(final_output, "w")
 
     #can change this depending on what the threshold of detecting a smile should be
     #truthrange = getTruth(input_truth_file)
     testrange = getTest(input_test_file)
-
-    #output_truth_file.close()
-    output_test_file.close()
-
-    #test_in = open(output_test, 'r')
-    #truth_in = open(output_truth, 'r')
     #[p_rev, p_rel, n_rev, n_rel, mis] = compare()
-    #test_in.close()
-    #truth_in.close()
 
     #input_truth_file.close()
     input_test_file.close()
@@ -290,6 +301,7 @@ def main(argv):
     final_output_file.write("test_in_truth: " + str(val1) + "\n")
     final_output_file.write("truth_in_test: " + str(val2) + "\n")
     final_output_file.close()'''
+
 
 
 if __name__ == "__main__":
