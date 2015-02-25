@@ -8,7 +8,7 @@ Determine how much smiles overlap between ground truth and test data by comparin
 
 Run as:
 
-% python ./processFiles.py   ground_truth_input.txt   ground_truth_output.txt   test_data_input.txt   test_data_output.txt   FINAL.txt
+% python ./processFiles.py   ground_truth.txt   test_data.txt   FINAL.txt
 
 where ground_truth_input.txt contains the data from the eaf_to_text program, and test_data_input contains the exported dump file from AttentionTool
 
