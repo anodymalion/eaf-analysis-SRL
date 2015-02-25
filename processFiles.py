@@ -11,6 +11,12 @@
 
 import sys, re
 
+truth_list = []
+test_list_joy = []
+test_list_au12 = []
+threshold_joy = .5
+threshold_au12 = .25
+
 class Range:
     '''information of each range of smile data'''
     def __init__(self, start, end):
@@ -29,7 +35,7 @@ def get_args(argv):
     return input_truth, output_truth, input_test, output_test, final_output
 
 #parse out whether smile existed in each frame
-def getTruth(input_file, output_file):
+def getTruth(input_file):
     first_line = input_file.readline()
     words = re.split(',|\r|\n|, ', first_line)
     smile_index = words.index("SMILE")
@@ -43,7 +49,8 @@ def getTruth(input_file, output_file):
         if(int(words[frame_index]) > frame_current):
             frame_current = int(words[frame_index])
             val = words[smile_index]
-            output_file.write(val + " ")
+            #output_file.write(val + " ")
+            truth_list.append(val)
             if start_new and int(val) == 1:
                 new_range = Range(int(words[frame_index]), int(words[frame_index]))
                 start_new = False
@@ -63,51 +70,84 @@ def getTruth(input_file, output_file):
 
 
 #parse out if joy surpassed a set level in each frame
-def getTest(input_file, output_file, threshold):
+#now checks action units 6 and 12 as well
+def getTest(input_file):
     first_line = input_file.readline()
-    k = -1 #offset caused by weird whitespace :( - may have to change it depending on the input_file
+    k = -1 #offset caused by mismatched whitespace in dump file
+    #may have to change it depending on the input_file
 
     while(first_line.find("StudyName") == -1):
         first_line = input_file.readline()
 
-    start_new = True
-    rangelist = []
+    start_new_joy = True
+    rangelist_joy = []
+
+    start_new_au12 = True
+    rangelist_au12 = []
+    
     words = re.split('\t', first_line)
 
     joy_index = words.index("Joy Evidence")
+    au6_index = words.index("AU6 Evidence")
+    au12_index = words.index("AU12 Evidence")
     frame_index = words.index("FrameNo")
-    #print "INDEX:", frame_index, joy_index
+
     for line in input_file:
         words = line.split()
         if joy_index < len(words):
-            if float(words[joy_index + k]) > threshold:
-                output_file.write("1 ")
-                #print "evidence:", words[frame_index + k], ":", words[joy_index + k]
-                val = 1
+            if float(words[joy_index + k]) > threshold_joy:
+                val_joy = 1
             else:
-                output_file.write("0 ")
-                val = 0
+                val_joy = 0
         else:
-            output_file.write("2 ")
-            val = 2
-        if start_new and val == 1:
-            new_range = Range(int(words[frame_index + k]), int(words[frame_index + k]))
-            start_new = False
-        elif not start_new and val == 0:
-            new_range.end = int(words[frame_index + k]) - 1
-            rangelist.append(new_range)
-            start_new = True
+            val_joy = 2
+
+        if start_new_joy and val_joy == 1:
+            new_range_joy = Range(int(words[frame_index + k]), int(words[frame_index + k]))
+            start_new_joy = False
+        elif not start_new_joy and val_joy == 0:
+            new_range_joy.end = int(words[frame_index + k]) - 1
+            rangelist_joy.append(new_range_joy)
+            start_new_joy = True
+
+        if au12_index < len(words):
+            if float(words[au12_index + k]) > threshold_au12:
+                val_au12 = 1
+            else:
+                val_au12 = 0
+        else:
+            val_au12 = 2 
+
+        if start_new_au12 and val_au12 == 1:
+            new_range_au12 = Range(int(words[frame_index + k]), int(words[frame_index + k]))
+            start_new_au12 = False
+        elif not start_new_au12 and val_au12 == 0:
+            new_range_au12.end = int(words[frame_index + k]) - 1
+            rangelist_au12.append(new_range_au12)
+            start_new_au12 = True
+
+        test_list_joy.append(val_joy)
+        test_list_au12.append(val_au12)
 
     print "getTest ranges:"
-    for rang in rangelist:
+    for rang in rangelist_joy:
         print rang.start, "\t", rang.end
-    return rangelist
-
-
-def compare(truth_file, test_file):
+    print "au12 ranges:"
+    for rang in rangelist_au12:
+        print rang.start, "\t", rang.end
     
-    truth_set = truth_file.readline().split()
-    test_set = test_file.readline().split()
+    return rangelist_joy
+
+
+   
+
+
+
+
+def compare():
+    
+    truth_set = truth_list
+    test_set = test_list_joy 
 
     p_relevance = -1.0
     p_reliable = -1.0
@@ -209,30 +249,29 @@ def compareRanges(truth_ranges, test_ranges):
 
 def main(argv):
     [input_truth, output_truth, input_test, output_test, final_output] = get_args(argv)
-    input_truth_file = open(input_truth, 'r')
+    #input_truth_file = open(input_truth, 'r')
     input_test_file = open(input_test, 'r')
-    output_truth_file = open(output_truth, "w")
+    #output_truth_file = open(output_truth, "w")
     output_test_file = open(output_test, "w")
-    final_output_file = open(final_output, "w")
+    #final_output_file = open(final_output, "w")
 
     #can change this depending on what the threshold of detecting a smile should be
-    threshold = .5
+    #truthrange = getTruth(input_truth_file)
+    testrange = getTest(input_test_file)
 
-    truthrange = getTruth(input_truth_file, output_truth_file)
-    testrange = getTest(input_test_file, output_test_file, threshold)
-
-    output_truth_file.close()
+    #output_truth_file.close()
     output_test_file.close()
 
-    test_in = open(output_test, 'r')
-    truth_in = open(output_truth, 'r')
-    [p_rev, p_rel, n_rev, n_rel, mis] = compare(truth_in, test_in)
-    test_in.close()
-    truth_in.close()
+    #test_in = open(output_test, 'r')
+    #truth_in = open(output_truth, 'r')
+    #[p_rev, p_rel, n_rev, n_rel, mis] = compare()
+    #test_in.close()
+    #truth_in.close()
 
-    input_truth_file.close()
+    #input_truth_file.close()
     input_test_file.close()
 
+    '''
     val1 = compareRanges(truthrange, testrange)
     val2 = compareRanges(testrange, truthrange)
 
@@ -250,7 +289,7 @@ def main(argv):
     final_output_file.write("miscount_proportion: " + str(p_rev) + "\n")
     final_output_file.write("test_in_truth: " + str(val1) + "\n")
     final_output_file.write("truth_in_test: " + str(val2) + "\n")
-    final_output_file.close()
+    final_output_file.close()'''
 
 
 if __name__ == "__main__":
