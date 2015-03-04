@@ -13,7 +13,8 @@ import sys, re
 
 #changeable
 threshold_joy = .5 #necessary joy to count as smile
-threshold_au12 = .25 #necessary AU12 activation to count as smile
+threshold_au12 = .5 #necessary AU12 activation to count as smile
+threshold_size = 25 #minimum number of frames in valid Range
 maxgap = 10  #leniency when merging smile ranges 
 #(e.g (1,3), (5,6) merged to (1,6) with maxgap > 0)
 
@@ -131,7 +132,11 @@ def getTest(input_file):
         test_list_joy.append(val_joy)
         test_list_au12.append(val_au12)
 
+    rangelist_joy = mergeRanges(rangelist_joy) 
+    rangelist_joy = deleteRanges(rangelist_joy)
+
     rangelist_au12 = mergeRanges(rangelist_au12) 
+    rangelist_au12 = deleteRanges(rangelist_au12)
 
     print "getTest ranges:"
     for rang in rangelist_joy:
@@ -147,7 +152,7 @@ def getTest(input_file):
 def mergeRanges(rangelist):
  
     new_rangelist = []
-    if(len(rangelist) > 0):
+    if len(rangelist) > 0:
         prev_rang = rangelist[0]
         for rang in rangelist:
             if rang.start - prev_rang.end <= maxgap + 1:
@@ -159,8 +164,19 @@ def mergeRanges(rangelist):
         new_rangelist.append(prev_rang)
     return new_rangelist
 
+#if range is too small, remove it
+def deleteRanges(rangelist):
+    new_rangelist = []
+    for rang in rangelist:
+        if rang.end - rang.start > threshold_size:
+            new_rangelist.append(rang)
+    return new_rangelist
 
+#create new Ranges based on multiple rangelists
+def combineRanges(multiRangelist):
+    new_rangelist = []
 
+    return new_rangelist
 
 
 #compare on a purely index to index basis (doesn't account for smile ranges)
@@ -270,16 +286,16 @@ def compareRanges(truth_ranges, test_ranges):
 
 def main(argv):
     [input_truth, input_test, final_output] = get_args(argv)
-    #input_truth_file = open(input_truth, 'r')
+    input_truth_file = open(input_truth, 'r')
     input_test_file = open(input_test, 'r')
     #final_output_file = open(final_output, "w")
 
     #can change this depending on what the threshold of detecting a smile should be
-    #truthrange = getTruth(input_truth_file)
+    truthrange = getTruth(input_truth_file)
     testrange = getTest(input_test_file)
     #[p_rev, p_rel, n_rev, n_rel, mis] = compare()
 
-    #input_truth_file.close()
+    input_truth_file.close()
     input_test_file.close()
 
     '''
