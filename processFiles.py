@@ -14,6 +14,7 @@ import sys, re
 #changeable
 threshold_joy = .5 #necessary joy to count as smile
 threshold_au12 = .5 #necessary AU12 activation to count as smile
+threshold_au6 = .25 #necessary AU6 activation to count as smile
 threshold_size = 25 #minimum number of frames in valid Range
 maxgap = 10  #leniency when merging smile ranges 
 #(e.g (1,3), (5,6) merged to (1,6) with maxgap > 0)
@@ -21,6 +22,7 @@ maxgap = 10  #leniency when merging smile ranges
 truth_list = []
 test_list_joy = []
 test_list_au12 = []
+test_list_au6 = []
 
 class Range:
     '''information of each range of smile data'''
@@ -88,15 +90,20 @@ def getTest(input_file):
     start_new_au12 = True
     rangelist_au12 = []
     
+    start_new_au6 = True
+    rangelist_au6 = []
+
     words = re.split('\t', first_line)
 
     joy_index = words.index("Joy Evidence")
-    #au6_index = words.index("AU6 Evidence")
+    au6_index = words.index("AU6 Evidence")
     au12_index = words.index("AU12 Evidence")
     frame_index = words.index("FrameNo")
 
     for line in input_file:
         words = line.split()
+        
+        #for joy
         if joy_index < len(words):
             if float(words[joy_index + k]) > threshold_joy:
                 val_joy = 1
@@ -113,6 +120,7 @@ def getTest(input_file):
             rangelist_joy.append(new_range_joy)
             start_new_joy = True
 
+        #for au 12
         if au12_index < len(words):
             if float(words[au12_index + k]) > threshold_au12:
                 val_au12 = 1
@@ -129,8 +137,27 @@ def getTest(input_file):
             rangelist_au12.append(new_range_au12)
             start_new_au12 = True
 
+        #for au 6
+        if au6_index < len(words):
+            if float(words[au6_index + k]) > threshold_au6:
+                val_au6 = 1
+            else:
+                val_au6 = 0
+        else:
+            val_au6 = 2 
+
+        if start_new_au6 and val_au6 == 1:
+            new_range_au6 = Range(int(words[frame_index + k]), int(words[frame_index + k]))
+            start_new_au6 = False
+        elif not start_new_au6 and val_au6 == 0:
+            new_range_au6.end = int(words[frame_index + k]) - 1
+            rangelist_au6.append(new_range_au6)
+            start_new_au6 = True
+
+
         test_list_joy.append(val_joy)
         test_list_au12.append(val_au12)
+        test_list_au6.append(val_au6)
 
     rangelist_joy = mergeRanges(rangelist_joy) 
     rangelist_joy = deleteRanges(rangelist_joy)
@@ -138,13 +165,18 @@ def getTest(input_file):
     rangelist_au12 = mergeRanges(rangelist_au12) 
     rangelist_au12 = deleteRanges(rangelist_au12)
 
+    rangelist_au6 = mergeRanges(rangelist_au6) 
+    rangelist_au6 = deleteRanges(rangelist_au6)
+
     print "getTest ranges:"
     for rang in rangelist_joy:
         print rang.start, "\t", rang.end
     print "au12 ranges:"
     for rang in rangelist_au12:
         print rang.start, "\t", rang.end
-    
+    print "au6 ranges:"
+    for rang in rangelist_au6:
+        print rang.start, "\t", rang.end
     return rangelist_joy
 
 
@@ -173,9 +205,9 @@ def deleteRanges(rangelist):
     return new_rangelist
 
 #create new Ranges based on multiple rangelists
-def combineRanges(multiRangelist):
+def combineRanges(rlist1, rlist2):
     new_rangelist = []
-
+    #incomplete obviously
     return new_rangelist
 
 
