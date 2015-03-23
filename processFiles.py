@@ -13,8 +13,8 @@ import sys, re
 
 #changeable
 threshold_joy = .5 #necessary joy to count as smile
-threshold_au12 = .5 #necessary AU12 activation to count as smile
-threshold_au6 = .25 #necessary AU6 activation to count as smile
+threshold_au12 = .4 #necessary AU12 activation to count as smile
+threshold_au6 = .4 #necessary AU6 activation to count as smile
 threshold_size = 25 #minimum number of frames in valid Range
 maxgap = 10  #leniency when merging smile ranges 
 #(e.g (1,3), (5,6) merged to (1,6) with maxgap > 0)
