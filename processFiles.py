@@ -177,12 +177,11 @@ def getTest(input_file):
     print "au6 ranges:"
     for rang in rangelist_au6:
         print rang.start, "\t", rang.end
-    return rangelist_joy
+    return [rangelist_joy, rangelist_au12, rangelist_au6]
 
 
 #merge smiles ranges that are significantly close together
 def mergeRanges(rangelist):
- 
     new_rangelist = []
     if len(rangelist) > 0:
         prev_rang = rangelist[0]
@@ -192,7 +191,6 @@ def mergeRanges(rangelist):
             else:
                 new_rangelist.append(prev_rang)
                 prev_rang = rang
-
         new_rangelist.append(prev_rang)
     return new_rangelist
 
@@ -207,9 +205,53 @@ def deleteRanges(rangelist):
 #create new Ranges based on multiple rangelists
 def combineRanges(rlist1, rlist2):
     new_rangelist = []
-    #incomplete obviously
+    for r1 in rlist1:
+        a = int(r1.start)
+        b = int(r1.end)
+        for r2 in rlist2:
+            c = int(r2.start)
+            d = int(r2.end)
+            if b < c:
+                continue
+            elif a > d:
+                continue
+            else:
+                new_range = Range(max(a, c), min(b, d))
+                new_rangelist.append(new_range)
+    new_rangelist = mergeRanges(new_rangelist)
     return new_rangelist
 
+#def overlap(rlist1, rlist2, p):
+    #use the smaller of the two ranges as the truth
+    
+
+
+
+
+'''
+       for r1 in rlist1:
+        r1.contained = 0
+        a = int(r1.start)
+        b = int(r2.end)
+        for r2 in rlist2:
+            c = int(r2.start)
+            d = int(r2.end)
+            if b < c:
+                continue
+            elif a > d:
+                continue
+            elif c <= a:
+                if b >= d:
+                    r1.contained += (d - a + 1)
+                else:
+                    r1.contained += (b - a + 1)
+            else:
+                if b > d:
+                    r1.contained += (d - c + 1)
+                else:
+                    r1.contained += (b - c + 1)
+            if float(r1.contained) / float(r1.end - r1.start + 1) > combThresh:
+'''
 
 #compare on a purely index to index basis (doesn't account for smile ranges)
 def compare():
@@ -286,6 +328,7 @@ def compareRanges(truth_ranges, test_ranges):
     total_number = 0.0
 
     for testrange in test_ranges:
+        testrange.contained = 0
         a = int(testrange.start)
         b = int(testrange.end)
         for truthrange in truth_ranges:
@@ -295,16 +338,8 @@ def compareRanges(truth_ranges, test_ranges):
                 continue
             elif a > d:
                 continue
-            elif c <= a:
-                if b >= d:
-                    testrange.contained += (d - a + 1)
-                else:
-                    testrange.contained += (b - a + 1)
-            else: #a < c, b > c
-                if b > d:
-                    testrange.contained += (d - c + 1)
-                else:
-                    testrange.contained += (b - c + 1)
+            else:
+                testrange.contained += (min(b,d) - max(a,c) + 1)
         total_contained += testrange.contained
         total_number += testrange.end - testrange.start + 1
         prop = float(testrange.contained) / float((testrange.end - testrange.start + 1))
@@ -324,21 +359,25 @@ def main(argv):
 
     #can change this depending on what the threshold of detecting a smile should be
     truthrange = getTruth(input_truth_file)
-    testrange = getTest(input_test_file)
+    gtest = getTest(input_test_file)
+    testrange = gtest[0]
     #[p_rev, p_rel, n_rev, n_rel, mis] = compare()
 
     input_truth_file.close()
     input_test_file.close()
 
-    '''
+    
     val1 = compareRanges(truthrange, testrange)
     val2 = compareRanges(testrange, truthrange)
+    val3 = compareRanges(truthrange, combineRanges(testrange, gtest[1]))
+    val4 = compareRanges(combineRanges(testrange, gtest[1]), truthrange)
 
-    print "proportion of test smiles actually in truth:"
-    print val1
-    print "proportion of truth smiles captured by test:"
-    print val2
+    print "proportion of test smiles actually in truth:", val1
+    print "proportion of truth smiles captured by test:", val2
+    print "proportion of combined joy/au12 smiles in truth:", val3
+    print "proportion of truth smiles captures by joy and au12:", val4
 
+    '''
     final_output_file.write("parameter: " + "Joy Intensity\n") #change w/ parameter
     final_output_file.write("threshold: " + str(threshold) + "\n")
     final_output_file.write("p_relevance: " + str(p_rev) + "\n")
