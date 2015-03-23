@@ -221,18 +221,13 @@ def combineRanges(rlist1, rlist2):
     new_rangelist = mergeRanges(new_rangelist)
     return new_rangelist
 
-#def overlap(rlist1, rlist2, p):
-    #use the smaller of the two ranges as the truth
-    
-
-
-
-
-'''
-       for r1 in rlist1:
+#find which elements in rlist1 sufficiently overlap p% with rlist2 to be included
+def overlap(rlist1, rlist2, p):
+    new_rangelist = []
+    for r1 in rlist1:
         r1.contained = 0
         a = int(r1.start)
-        b = int(r2.end)
+        b = int(r1.end)
         for r2 in rlist2:
             c = int(r2.start)
             d = int(r2.end)
@@ -240,18 +235,17 @@ def combineRanges(rlist1, rlist2):
                 continue
             elif a > d:
                 continue
-            elif c <= a:
-                if b >= d:
-                    r1.contained += (d - a + 1)
-                else:
-                    r1.contained += (b - a + 1)
             else:
-                if b > d:
-                    r1.contained += (d - c + 1)
-                else:
-                    r1.contained += (b - c + 1)
-            if float(r1.contained) / float(r1.end - r1.start + 1) > combThresh:
-'''
+                r1.contained += min(b, d) - max(a, c) + 1
+                prop = float(r1.contained) / float(r1.end - r1.start + 1)
+                if prop >= p:
+                    new_rangelist.append(r1)
+                    break
+    return new_rangelist
+
+
+    
+
 
 #compare on a purely index to index basis (doesn't account for smile ranges)
 def compare():
