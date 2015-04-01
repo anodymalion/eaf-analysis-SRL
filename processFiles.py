@@ -12,10 +12,10 @@
 import sys, re
 
 #changeable
-threshold_joy = .5 #necessary joy to count as smile
-threshold_au12 = .5 #necessary AU12 activation to count as smile
+threshold_joy = .12 #necessary joy to count as smile
+threshold_au12 = .3 #necessary AU12 activation to count as smile
 threshold_au6 = .25 #necessary AU6 activation to count as smile
-threshold_size = 25 #minimum number of frames in valid Range
+threshold_size = 15 #minimum number of frames in valid Range
 maxgap = 10  #leniency when merging smile ranges 
 #(e.g (1,3), (5,6) merged to (1,6) with maxgap > 0)
 
@@ -95,7 +95,7 @@ def getTest(input_file):
 
     words = re.split('\t', first_line)
 
-    joy_index = words.index("Joy Evidence")
+    joy_index = words.index("Joy Intensity")
     au6_index = words.index("AU6 Evidence")
     au12_index = words.index("AU12 Evidence")
     frame_index = words.index("FrameNo")
@@ -168,7 +168,7 @@ def getTest(input_file):
     rangelist_au6 = mergeRanges(rangelist_au6) 
     rangelist_au6 = deleteRanges(rangelist_au6)
 
-    print "getTest ranges:"
+    print "joy ranges:"
     for rang in rangelist_joy:
         print rang.start, "\t", rang.end
     print "au12 ranges:"
@@ -248,10 +248,10 @@ def overlap(rlist1, rlist2, p):
 
 
 #compare on a purely index to index basis (doesn't account for smile ranges)
-def compare():
+def compare(truth_set, test_set):
     
-    truth_set = truth_list
-    test_set = test_list_joy 
+    #truth_set = truth_list
+    #test_set = test_list_joy 
 
     p_relevance = -1.0
     p_reliable = -1.0
@@ -272,10 +272,7 @@ def compare():
     miscount = 0.0
     miscount_prop = -1.0
 
-    if(len(truth_set) < len(test_set)):
-        size = len(truth_set)
-    else:
-        size = len(test_set)
+    size = min(len(truth_set), len(test_set))
 
     for i in range(size):
         total += 1
@@ -310,9 +307,9 @@ def compare():
     if total > 0:
         miscount_prop = miscount / total
 
-    print "p_relev:", p_relevance, "\np_relib:", p_reliable 
-    print "n_relev:", n_relevance, "\nn_relib:", n_reliable
-    print "miscount:", miscount_prop
+    #print "p_relev:", p_relevance, "\np_relib:", p_reliable 
+    #print "n_relev:", n_relevance, "\nn_relib:", n_reliable
+    #print "miscount:", miscount_prop
     return p_relevance, p_reliable, n_relevance, n_reliable, miscount_prop
 
 
@@ -349,13 +346,11 @@ def main(argv):
     [input_truth, input_test, final_output] = get_args(argv)
     input_truth_file = open(input_truth, 'r')
     input_test_file = open(input_test, 'r')
-    #final_output_file = open(final_output, "w")
+    final_output_file = open(final_output, "w")
 
-    #can change this depending on what the threshold of detecting a smile should be
     truthrange = getTruth(input_truth_file)
     gtest = getTest(input_test_file)
     testrange = gtest[0]
-    #[p_rev, p_rel, n_rev, n_rel, mis] = compare()
 
     input_truth_file.close()
     input_test_file.close()
@@ -363,25 +358,38 @@ def main(argv):
     
     val1 = compareRanges(truthrange, testrange)
     val2 = compareRanges(testrange, truthrange)
+    val5 = compareRanges(truthrange, gtest[1])
+    val6 = compareRanges(gtest[1], truthrange)
     val3 = compareRanges(truthrange, combineRanges(testrange, gtest[1]))
     val4 = compareRanges(combineRanges(testrange, gtest[1]), truthrange)
 
-    print "proportion of test smiles actually in truth:", val1
-    print "proportion of truth smiles captured by test:", val2
-    print "proportion of combined joy/au12 smiles in truth:", val3
-    print "proportion of truth smiles captures by joy and au12:", val4
+    final_output_file.write("number of true smiles : " + str(len(truthrange)) + "\n")
+    final_output_file.write("threshold_joy: " + str(threshold_joy) + "\n")
+    final_output_file.write("threshold_au12: " + str(threshold_au12) + "\n")
+    final_output_file.write("proportion of joy ranges actually in truth:      " + str(val1) + "\n")
+    final_output_file.write("proportion of truth smiles captured by joy:      " + str(val2) + "\n")
+    final_output_file.write("proportion of au12 ranges actually in truth:     " + str(val5) + "\n")
+    final_output_file.write("proportion of truth smiles captured by au12:     " + str(val6) + "\n")
+    final_output_file.write("proportion of combined joy/au12 smiles in truth: " + str(val3) + "\n")
+    final_output_file.write("proportion of truth smiles captured by joy/au12: " + str(val4) + "\n")
+    final_output_file.write("\n")
 
-    '''
-    final_output_file.write("parameter: " + "Joy Intensity\n") #change w/ parameter
-    final_output_file.write("threshold: " + str(threshold) + "\n")
-    final_output_file.write("p_relevance: " + str(p_rev) + "\n")
-    final_output_file.write("p_reliability: " + str(p_rel) + "\n")
-    final_output_file.write("n_relevance: " + str(n_rev) + "\n")
-    final_output_file.write("n_reliability: " + str(n_rel) + "\n")
+    outputform(final_output_file, "Truth", truth_list, "Joy Intensity", test_list_joy)
+    outputform(final_output_file, "Truth", truth_list, "AU12", test_list_au12)
+
+    final_output_file.close()
+
+
+def outputform(final_output_file, parameter1, list1, parameter2, list2):
+    [p_rev, p_rel, n_rev, n_rel, mis] = compare(list1, list2)
+    final_output_file.write("parameters:          " + parameter1 + " vs " + parameter2 + "\n")
+    final_output_file.write("p_relevance:         " + str(p_rev) + "\n")
+    final_output_file.write("p_reliability:       " + str(p_rel) + "\n")
+    final_output_file.write("n_relevance:         " + str(n_rev) + "\n")
+    final_output_file.write("n_reliability:       " + str(n_rel) + "\n")
     final_output_file.write("miscount_proportion: " + str(p_rev) + "\n")
-    final_output_file.write("test_in_truth: " + str(val1) + "\n")
-    final_output_file.write("truth_in_test: " + str(val2) + "\n")
-    final_output_file.close()'''
+    final_output_file.write("\n")
+    return
 
 
 
