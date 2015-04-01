@@ -4,10 +4,8 @@
 
 #run as:
 #python processFiles.py ground_truth_input.txt  test_data_input.txt  FINAL.txt
-
 #FINAL will contain relevance and reliability proportions and other data
-#test_in_truth = proportion of test data smiles actually present in truth data
-#truth_in_test = proportion of truth smiles captured by test data
+#see 
 
 import sys, re
 
@@ -307,9 +305,6 @@ def compare(truth_set, test_set):
     if total > 0:
         miscount_prop = miscount / total
 
-    #print "p_relev:", p_relevance, "\np_relib:", p_reliable 
-    #print "n_relev:", n_relevance, "\nn_relib:", n_reliable
-    #print "miscount:", miscount_prop
     return p_relevance, p_reliable, n_relevance, n_reliable, miscount_prop
 
 
@@ -366,6 +361,7 @@ def main(argv):
     final_output_file.write("number of true smiles : " + str(len(truthrange)) + "\n")
     final_output_file.write("threshold_joy: " + str(threshold_joy) + "\n")
     final_output_file.write("threshold_au12: " + str(threshold_au12) + "\n")
+    final_output_file.write("\n")
     final_output_file.write("proportion of joy ranges actually in truth:      " + str(val1) + "\n")
     final_output_file.write("proportion of truth smiles captured by joy:      " + str(val2) + "\n")
     final_output_file.write("proportion of au12 ranges actually in truth:     " + str(val5) + "\n")
