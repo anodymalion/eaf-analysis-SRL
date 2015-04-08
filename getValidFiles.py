@@ -42,7 +42,7 @@ au12_frtlist = []
 mix_intlist = []
 mix_frtlist = []
 
-rootDir = "/cygdrive/e/individual_data"
+rootDir = "individual_data"
 for dirName, subdirList, fileList in os.walk(rootDir):
 	for sname in subdirList:
 		finalfile = os.path.join(rootDir, sname) + "/FINAL.txt"
